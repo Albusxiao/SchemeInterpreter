@@ -9,7 +9,7 @@
 
 extern std::map<std::string, ExprType> primitives;
 extern std::map<std::string, ExprType> reserved_words;
-
+/*
 bool isExplicitVoidCall(Expr expr) {
     MakeVoid* make_void_expr = dynamic_cast<MakeVoid*>(expr.get());
     if (make_void_expr != nullptr) {
@@ -43,8 +43,7 @@ bool isExplicitVoidCall(Expr expr) {
         }
     }
     return false;
-}
-
+}*/
 void REPL(){
     // read - evaluation - print loop
     Assoc global_env = empty();
@@ -62,8 +61,8 @@ void REPL(){
             val -> show(std :: cout); // value print
         }
         catch (const RuntimeError &RE){
-            // std :: cout << RE.message();
-            std :: cout << "RuntimeError";
+             std :: cout << RE.message();
+            // std :: cout << "RuntimeError";
         }
         puts("");
     }

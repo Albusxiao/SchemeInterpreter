@@ -103,6 +103,11 @@ struct Rational : ValueBase {
     int numerator;
     int denominator;
     Rational(int, int);
+    Rational &operator=(const Rational &other){
+        this->numerator=other.numerator;
+        this->denominator=other.denominator;
+        return *this;
+    }
     virtual void show(std::ostream &) override;
 };
 Value RationalV(int, int);
@@ -175,7 +180,6 @@ struct Pair : ValueBase {
     virtual void showCdr(std::ostream &) override;
 };
 Value PairV(const Value &, const Value &);
-
 /**
  * @brief Procedure (function) value
  */

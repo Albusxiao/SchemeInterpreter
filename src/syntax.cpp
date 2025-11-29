@@ -1,4 +1,5 @@
 #include "syntax.hpp"
+#include "RE.hpp"
 #include <cstring>
 #include <vector>
 
@@ -72,7 +73,7 @@ bool tryParseNumber(const std::string &s, int &result) {
   bool neg = false;
   int n = 0;
   int i = 0;
-  
+
   // Single '+' or '-' are not numbers
   if (s.size() == 1 && (s[0] == '+' || s[0] == '-'))
     return false;
@@ -127,6 +128,7 @@ Syntax createIdentifierSyntax(const std::string &s) {
     return Syntax(new TrueSyntax());
   if (s == "#f")
     return Syntax(new FalseSyntax());
+
   return Syntax(new SymbolSyntax(s));
 }
 
@@ -208,7 +210,7 @@ Syntax readItem(std::istream &is) {
 
 Syntax readList(std::istream &is) {
     List *stx = new List();
-    while (readSpace(is).peek() != ')' && readSpace(is).peek() != ')')
+    while (readSpace(is).peek() != ')')
         stx->stxs.push_back(readItem(is));
     is.get(); // ')'
     return Syntax(stx);
