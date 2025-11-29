@@ -175,9 +175,21 @@ Value Var::eval(Assoc &e) {
     }
     return matched_value;
 }
-
-Value distribute(Rational &ans) {
-    int temp = std::__gcd(ans.denominator, ans.numerator);
+long long gcd(long long a, long long b) {
+    a=abs(a);b=abs(b);
+    while (b != 0) {
+        int temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+struct Rational_L {
+    long long denominator, numerator;
+    Rational_L(long long n, long long d) :denominator(d),numerator(n){}
+};
+Value distribute(Rational_L &ans) {
+    long long temp = gcd(ans.denominator, ans.numerator);
     ans.denominator /= temp;
     ans.numerator /= temp;
     if (ans.denominator < 0) {
@@ -197,7 +209,7 @@ Value Plus::evalRator(const Value &rand1, const Value &rand2) {
     // +
     //TODO: To complete the addition logic
     if (IS_DIGIT(rand1) && IS_DIGIT(rand2)) {
-        Rational sum(1, 1);
+        Rational_L sum(1, 1);
         if (rand1->v_type == V_INT)sum.numerator = dynamic_cast<Integer *>(rand1.get())->n;
         else if (rand1->v_type == V_RATIONAL) {
             sum.numerator = dynamic_cast<Rational *>(rand1.get())->numerator;
@@ -207,11 +219,11 @@ Value Plus::evalRator(const Value &rand1, const Value &rand2) {
         else if (rand2->v_type == V_RATIONAL) {
             Rational temp_RA(dynamic_cast<Rational *>(rand2.get())->numerator,
                              dynamic_cast<Rational *>(rand2.get())->denominator);
-            int temp = std::__gcd(temp_RA.denominator, sum.denominator);
-            temp = temp_RA.denominator * sum.denominator / temp;
+            long long temp = gcd(temp_RA.denominator, sum.denominator);
+            temp = static_cast<long long>(temp_RA.denominator) * sum.denominator / temp;
             sum.numerator *= temp / sum.denominator;
             sum.denominator = temp;
-            sum.numerator += temp_RA.numerator * temp / temp_RA.denominator;
+            sum.numerator += static_cast<long long>(temp_RA.numerator) * temp / static_cast<long long>(temp_RA.denominator);
         }
         return distribute(sum);
     }
@@ -222,7 +234,7 @@ Value Minus::evalRator(const Value &rand1, const Value &rand2) {
     // -
     //TODO: To complete the substraction logic
     if (IS_DIGIT(rand1) && IS_DIGIT(rand2)) {
-        Rational difference(1, 1);
+        Rational_L difference(1, 1);
         if (rand1->v_type == V_INT)difference.numerator = dynamic_cast<Integer *>(rand1.get())->n;
         else if (rand1->v_type == V_RATIONAL) {
             difference.numerator = dynamic_cast<Rational *>(rand1.get())->numerator;
@@ -234,11 +246,11 @@ Value Minus::evalRator(const Value &rand1, const Value &rand2) {
         else if (rand2->v_type == V_RATIONAL) {
             Rational temp_RA(dynamic_cast<Rational *>(rand2.get())->numerator,
                              dynamic_cast<Rational *>(rand2.get())->denominator);
-            int temp = std::__gcd(temp_RA.denominator, difference.denominator);
-            temp = temp_RA.denominator * difference.denominator / temp;
+            long long temp = gcd(temp_RA.denominator, difference.denominator);
+            temp = static_cast<long long>(temp_RA.denominator) * difference.denominator / temp;
             difference.numerator *= temp / difference.denominator;
             difference.denominator = temp;
-            difference.numerator -= temp_RA.numerator * temp / temp_RA.denominator;
+            difference.numerator -= static_cast<long long>(temp_RA.numerator) * temp / static_cast<long long>(temp_RA.denominator);
         }
         return distribute(difference);
     }
@@ -249,7 +261,7 @@ Value Mult::evalRator(const Value &rand1, const Value &rand2) {
     // *
     //TODO: To complete the Multiplication logic
     if (IS_DIGIT(rand1) && IS_DIGIT(rand2)) {
-        Rational multi(1, 1);
+        Rational_L multi(1, 1);
         if (rand1->v_type == V_INT)multi.numerator = dynamic_cast<Integer *>(rand1.get())->n;
         else if (rand1->v_type == V_RATIONAL) {
             multi.numerator = dynamic_cast<Rational *>(rand1.get())->numerator;
@@ -271,7 +283,7 @@ Value Div::evalRator(const Value &rand1, const Value &rand2) {
     // /
     //TODO: To complete the dicision logic
     if (IS_DIGIT(rand1) && IS_DIGIT(rand2)) {
-        Rational div(1, 1);
+        Rational_L div(1, 1);
         if (rand1->v_type == V_INT)div.numerator = dynamic_cast<Integer *>(rand1.get())->n;
         else if (rand1->v_type == V_RATIONAL) {
             div.numerator = dynamic_cast<Rational *>(rand1.get())->numerator;
@@ -309,7 +321,7 @@ Value PlusVar::evalRator(const std::vector<Value> &args) {
     // + with multiple args
     if (args.empty())throw(RuntimeError("No parameter"));
     for (int i = 0; i < args.size(); i++)if (!IS_DIGIT(args[i]))throw(RuntimeError("Wrong typename"));
-    Rational sum(0, 1);
+    Rational_L sum(0, 1);
     if (args[0]->v_type == V_INT)sum.numerator = dynamic_cast<Integer *>(args[0].get())->n;
     else if (args[0]->v_type == V_RATIONAL) {
         sum.numerator = dynamic_cast<Rational *>(args[0].get())->numerator;
@@ -321,12 +333,12 @@ Value PlusVar::evalRator(const std::vector<Value> &args) {
         else if (args[i]->v_type == V_RATIONAL) {
             Rational temp_RA(dynamic_cast<Rational *>(args[0].get())->numerator,
                              dynamic_cast<Rational *>(args[i].get())->denominator);
-            int temp = std::__gcd(temp_RA.denominator, sum.denominator);
-            temp = temp_RA.denominator * sum.denominator / temp;
+            long long temp = gcd(temp_RA.denominator, sum.denominator);
+            temp = static_cast<long long>(temp_RA.denominator) * sum.denominator / temp;
             sum.numerator *= temp / sum.denominator;
             sum.denominator = temp;
-            sum.numerator += temp_RA.numerator * temp / temp_RA.denominator;
-            temp_gcd = std::__gcd(sum.numerator, sum.denominator);
+            sum.numerator += static_cast<long long>(temp_RA.numerator) * temp / static_cast<long long>(temp_RA.denominator);
+            temp_gcd = gcd(sum.numerator, sum.denominator);
             sum.numerator /= temp_gcd;
             sum.denominator /= temp_gcd;
         }
@@ -338,7 +350,7 @@ Value MinusVar::evalRator(const std::vector<Value> &args) {
     // - with multiple args
     if (args.empty())throw(RuntimeError("No parameter"));
     for (int i = 0; i < args.size(); i++)if (!IS_DIGIT(args[i]))throw(RuntimeError("Wrong typename"));
-    Rational difference(0, 1);
+    Rational_L difference(0, 1);
     if (args[0]->v_type == V_INT)difference.numerator = dynamic_cast<Integer *>(args[0].get())->n;
     else if (args[0]->v_type == V_RATIONAL) {
         difference.numerator = dynamic_cast<Rational *>(args[0].get())->numerator;
@@ -352,12 +364,12 @@ Value MinusVar::evalRator(const std::vector<Value> &args) {
         else if (args[i]->v_type == V_RATIONAL) {
             Rational temp_RA(dynamic_cast<Rational *>(args[0].get())->numerator,
                              dynamic_cast<Rational *>(args[i].get())->denominator);
-            int temp = std::__gcd(temp_RA.denominator, difference.denominator);
-            temp = temp_RA.denominator * difference.denominator / temp;
+            long long temp = gcd(temp_RA.denominator, difference.denominator);
+            temp = static_cast<long long>(temp_RA.denominator) * difference.denominator / temp;
             difference.numerator *= temp / difference.denominator;
             difference.denominator = temp;
-            difference.numerator -= temp_RA.numerator * temp / temp_RA.denominator;
-            temp_gcd = std::__gcd(difference.numerator, difference.denominator);
+            difference.numerator -= static_cast<long long>(temp_RA.numerator) * temp / static_cast<long long>(temp_RA.denominator);
+            temp_gcd = gcd(difference.numerator, difference.denominator);
             difference.numerator /= temp_gcd;
             difference.denominator /= temp_gcd;
         }
@@ -370,21 +382,21 @@ Value MultVar::evalRator(const std::vector<Value> &args) {
     // * with multiple args
     if (args.empty())throw(RuntimeError("No parameter"));
     for (int i = 0; i < args.size(); i++)if (!IS_DIGIT(args[i]))throw(RuntimeError("Wrong typename"));
-    Rational mul(0, 1);
+    Rational_L mul(0, 1);
     if (args[0]->v_type == V_INT)mul.numerator = dynamic_cast<Integer *>(args[0].get())->n;
     else if (args[0]->v_type == V_RATIONAL) {
         mul.numerator = dynamic_cast<Rational *>(args[0].get())->numerator;
         mul.denominator = dynamic_cast<Rational *>(args[0].get())->denominator;
     }
-    int temp_gcd;
+    long long temp_gcd;
     for (int i = 1; i < args.size(); i++) {
         if (args[i]->v_type == V_INT)mul.numerator *= dynamic_cast<Integer *>(args[i].get())->n;
         else if (args[i]->v_type == V_RATIONAL) {
             Rational temp_RA(dynamic_cast<Rational *>(args[0].get())->numerator,
                              dynamic_cast<Rational *>(args[i].get())->denominator);
-            mul.numerator *= mul.numerator;
-            mul.denominator *= mul.denominator;
-            temp_gcd = std::__gcd(mul.numerator, mul.denominator);
+            mul.numerator *= temp_RA.numerator;
+            mul.denominator *= temp_RA.denominator;
+            temp_gcd = gcd(mul.numerator, mul.denominator);
             mul.numerator /= temp_gcd;
             mul.denominator /= temp_gcd;
         }
@@ -397,21 +409,21 @@ Value DivVar::evalRator(const std::vector<Value> &args) {
     //TODO: To complete the divisor logic
     if (args.empty())throw(RuntimeError("No parameter"));
     for (int i = 0; i < args.size(); i++)if (!IS_DIGIT(args[i]))throw(RuntimeError("Wrong typename"));
-    Rational div(0, 1);
+    Rational_L div(0, 1);
     if (args[0]->v_type == V_INT)div.numerator = dynamic_cast<Integer *>(args[0].get())->n;
     else if (args[0]->v_type == V_RATIONAL) {
         div.numerator = dynamic_cast<Rational *>(args[0].get())->numerator;
         div.denominator = dynamic_cast<Rational *>(args[0].get())->denominator;
     }
-    int temp_gcd;
+    long long temp_gcd;
     for (int i = 1; i < args.size(); i++) {
         if (args[i]->v_type == V_INT)div.denominator *= dynamic_cast<Integer *>(args[i].get())->n;
         else if (args[i]->v_type == V_RATIONAL) {
             Rational temp_RA(dynamic_cast<Rational *>(args[0].get())->numerator,
                              dynamic_cast<Rational *>(args[i].get())->denominator);
-            div.numerator *= div.denominator;
-            div.denominator *= div.numerator;
-            temp_gcd = std::__gcd(div.numerator, div.denominator);
+            div.numerator *= temp_RA.denominator;
+            div.denominator *= temp_RA.numerator;
+            temp_gcd = gcd(div.numerator, div.denominator);
             div.numerator /= temp_gcd;
             div.denominator /= temp_gcd;
         }
@@ -432,8 +444,8 @@ Value Expt::evalRator(const Value &rand1, const Value &rand2) {
             throw(RuntimeError("0^0 is undefined"));
         }
 
-        long long result = 1;
-        long long b = base;
+        int result = 1;
+        int b = base;
         int exp = exponent;
 
         while (exp > 0) {
@@ -452,7 +464,7 @@ Value Expt::evalRator(const Value &rand1, const Value &rand2) {
             exp /= 2;
         }
 
-        return IntegerV((int) result);
+        return IntegerV(result);
     }
     throw(RuntimeError("Wrong typename"));
 }
