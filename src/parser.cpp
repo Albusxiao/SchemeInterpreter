@@ -272,6 +272,7 @@ Expr List::parse(Assoc &env) {
                     } else throw(RuntimeError("Wrong format in Lambada"));
                 }
                 case E_DEFINE: {
+                    std::cout<<stxs.size()<<std::endl;
                     if (stxs.size() != 3) throw(RuntimeError("Wrong format in Define"));
                     if (dynamic_cast<SymbolSyntax *>(stxs[1].get())) {
                         string name = dynamic_cast<SymbolSyntax *>(stxs[1].get())->s;
@@ -307,24 +308,25 @@ Expr List::parse(Assoc &env) {
                         List *temp_ls = dynamic_cast<List *>(stxs[1].get());
                         vector<pair<string, Expr> > parameters;
                         parameters.clear();
-
+                        Assoc temp_env = env;
                         for (int i = 0; i < temp_ls->stxs.size(); i++) {
                             List *temp_lst = dynamic_cast<List *>(temp_ls->stxs[i].get());
-                            if (temp_lst && temp_lst->stxs.size() == 2) {
+                            if (temp_lst!=nullptr && temp_lst->stxs.size() == 2) {
                                 if (dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())) {
                                     parameters.push_back({
                                         dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s,
                                         temp_lst->stxs[1]->parse(env)
                                     });
+                                    temp_env=extend(dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s,VoidV(),temp_env);
                                 } else throw(RuntimeError("Wrong in Let"));
                             } else throw(RuntimeError("Wrong in Let's parameters"));
                         }
                         Expr e = nullptr;
                         vector<Expr> temp;
                         temp.clear();
-                        if (stxs.size() == 3)e = stxs[2]->parse(env);
+                        if (stxs.size() == 3)e = stxs[2]->parse(temp_env);
                         else {
-                            for (int i = 2; i < stxs.size(); i++)temp.push_back(stxs[i]->parse(env));
+                            for (int i = 2; i < stxs.size(); i++)temp.push_back(stxs[i]->parse(temp_env));
                             e = Expr(new Begin(temp));
                         }
                         return Expr(new Let(parameters, e));
@@ -341,7 +343,7 @@ Expr List::parse(Assoc &env) {
                         Assoc temp_env = env;
                         for (int i = 0; i < temp_ls->stxs.size(); i++) {
                             List *temp_lst = dynamic_cast<List *>(temp_ls->stxs[i].get());
-                            if (temp_lst && temp_lst->stxs.size() == 2) {
+                            if (temp_lst!=nullptr && temp_lst->stxs.size() == 2) {
                                 if (dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())) {
                                     string name = dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s;
                                     // add placeholder so that bindings can refer to each other during parsing
@@ -349,16 +351,12 @@ Expr List::parse(Assoc &env) {
                                 } else throw(RuntimeError("Wrong in Letrec"));
                             } else throw(RuntimeError("Wrong in Letrec's parameters"));
                         }
-
-                        // Now parse the binding expressions using the temp_env so that
-                        // references to the names resolve as variables during parsing
                         for (int i = 0; i < temp_ls->stxs.size(); i++) {
                             List *temp_lst = dynamic_cast<List *>(temp_ls->stxs[i].get());
                             string name = dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s;
                             Expr rhs = temp_lst->stxs[1]->parse(temp_env);
                             parameters.push_back({name, rhs});
                         }
-
                         Expr e = nullptr;
                         vector<Expr> temp;
                         temp.clear();
@@ -368,7 +366,7 @@ Expr List::parse(Assoc &env) {
                             e = Expr(new Begin(temp));
                         }
                         return Expr(new Letrec(parameters, e));
-                    } else throw (RuntimeError("Wrong in Let"));
+                    } else throw (RuntimeError("Wrong in Letrec"));
                 }
                 case E_SET: {
                     if (stxs.size() != 3) throw(RuntimeError("Wrong format in Set"));
@@ -381,6 +379,10 @@ Expr List::parse(Assoc &env) {
                     throw RuntimeError("Unknown reserved word: " + op);
             }
         }
+        vector<Expr> parameters;
+        parameters.clear();
+        for (int i = 1; i < stxs.size(); i++)parameters.push_back(stxs[i]->parse(env));
+        return Expr(new Apply(new Var(dynamic_cast<SymbolSyntax *>(stxs[0].get())->s),parameters));
         //default: use Apply to be an expression
         //TODO: TO COMPLETE THE PARSER LOGIC
         throw(RuntimeError("Unable to parse: " + op));

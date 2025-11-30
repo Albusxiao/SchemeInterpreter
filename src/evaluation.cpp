@@ -97,10 +97,7 @@ Value Var::eval(Assoc &e) {
     //When a variable is not defined in the current scope, your interpreter should output RuntimeError
     if (x.empty()) throw(RuntimeError("Invalid variable name"));
     if (x[0] == '.' || x[0] == '@') throw(RuntimeError("Invalid variable name"));
-    // First-character cannot be a digit
     if (isdigit(static_cast<unsigned char>(x[0]))) throw(RuntimeError("Invalid variable name"));
-
-    // If the token as a whole can be parsed as a number, treat it as a number.
     if (try_parse_as_number(x)) {
         bool neg = false;
         int n = 0;
@@ -116,8 +113,6 @@ Value Var::eval(Assoc &e) {
         }
         return IntegerV(neg ? -n : n);
     }
-
-    // Variable names must not contain these characters
     if (x.find('#') != std::string::npos || x.find('\'') != std::string::npos || x.find('"') != std::string::npos || x.find('`') != std::string::npos) {
         throw(RuntimeError("Invalid variable name"));
     }
@@ -145,8 +140,6 @@ Value Var::eval(Assoc &e) {
             };
 
             auto it = primitive_map.find(primitives[x]);
-            //TOD0:to PASS THE parameters correctly;
-            //COMPLETE THE CODE WITH THE HINT IN IF SENTENCE WITH CORRECT RETURN VALUE
             if (it != primitive_map.end()) {
                 //TODO
                 return ProcedureV(it->second.second, it->second.first, e);
@@ -165,8 +158,6 @@ Value Var::eval(Assoc &e) {
                 {E_SET, {new Set({}, new Var("parm")), {{}, "parm"}}},
             };
             auto it = reserved_map.find(primitives[x]);
-            //TOD0:to PASS THE parameters correctly;
-            //COMPLETE THE CODE WITH THE HINT IN IF SENTENCE WITH CORRECT RETURN VALUE
             if (it != reserved_map.end()) {
                 //TODO
                 return ProcedureV(it->second.second, it->second.first, e);
@@ -728,55 +719,47 @@ Value Syntaxtransit(const Syntax s, Assoc &e) {
     if (dynamic_cast<List *>(s.get())) {
         List *temp_sy = dynamic_cast<List *>(s.get());
         if (temp_sy->stxs.empty()) return NullV();
-        if (dynamic_cast<List *>(temp_sy->stxs[temp_sy->stxs.size() - 1].get())) {
-            Value temp = Syntaxtransit(temp_sy->stxs[temp_sy->stxs.size() - 1], e);
-            for (int i = temp_sy->stxs.size() - 2; i >= 0; i--) {
-                if (dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get()) &&
-                    dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s.size() == 1 &&
-                    dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s[0] == '.') {
-                    continue;
-                } else temp = PairV(Syntaxtransit(temp_sy->stxs[i], e), temp);
-            }
-            return temp;
-        }
-        else {
-            if (dynamic_cast<SymbolSyntax *>(temp_sy->stxs[temp_sy->stxs.size() - 2].get())) {
-                if (dynamic_cast<SymbolSyntax *>(temp_sy->stxs[temp_sy->stxs.size() - 2].get())->s.size() == 1 &&
-                dynamic_cast<SymbolSyntax *>(temp_sy->stxs[temp_sy->stxs.size() - 2].get())->s[0] == '.') {
-                    Value temp = Syntaxtransit(temp_sy->stxs[temp_sy->stxs.size() - 1], e);
-                    for (int i = temp_sy->stxs.size() - 3; i >= 0; i--) {
-                        if (dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get()) &&
-                            dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s.size() == 1 &&
-                            dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s[0] == '.') {
-                            continue;
-                            } else temp = PairV(Syntaxtransit(temp_sy->stxs[i], e), temp);
-                    }
-                    return temp;
-                }
-                else {
-                    Value temp =PairV( Syntaxtransit(temp_sy->stxs[temp_sy->stxs.size() - 1], e),NullV());
-                    for (int i = temp_sy->stxs.size() - 2; i >= 0; i--) {
-                        if (dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get()) &&
-                            dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s.size() == 1 &&
-                            dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s[0] == '.') {
-                            continue;
-                            } else temp = PairV(Syntaxtransit(temp_sy->stxs[i], e), temp);
-                    }
-                    return temp;
-                }
-            }
-            else {
-                Value temp =PairV( Syntaxtransit(temp_sy->stxs[temp_sy->stxs.size() - 1], e),NullV());
-                for (int i = temp_sy->stxs.size() - 2; i >= 0; i--) {
-                    if (dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get()) &&
-                        dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s.size() == 1 &&
-                        dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get())->s[0] == '.') {
-                        continue;
-                        } else temp = PairV(Syntaxtransit(temp_sy->stxs[i], e), temp);
-                }
-                return temp;
+        int len=temp_sy->stxs.size();
+        if (len==3&&dynamic_cast<SymbolSyntax *>(temp_sy->stxs[1].get())) {
+            if (dynamic_cast<SymbolSyntax *>(temp_sy->stxs[1].get())->s.size()==1&&dynamic_cast<SymbolSyntax *>(temp_sy->stxs[1].get())->s[0]=='.') {
+                Value car=Syntaxtransit(temp_sy->stxs[0],e);
+                Value cdr=Syntaxtransit(temp_sy->stxs[2],e);
+                return PairV(car,cdr);
             }
         }
+        for (int i = 0; i < len; i++)
+        {
+            SymbolSyntax* dot= dynamic_cast<SymbolSyntax *>(temp_sy->stxs[i].get());
+            if (dot && dot->s == ".")
+            {
+                if (i == 0 || i == temp_sy->stxs.size() - 1)throw RuntimeError("RuntimeError");
+                Value car = NullV();
+                for (int j = i - 1; j >= 0; j--)
+                {
+                    Value elem = Syntaxtransit(temp_sy->stxs[j],e);
+                    car = PairV(elem, car);
+                }
+                Value cdr = Syntaxtransit(temp_sy->stxs[i + 1],e);
+                Value cu = car;
+                while (Pair* temp_pair = dynamic_cast<Pair *>(cu.get()))
+                {
+                    if (dynamic_cast<Null *>(temp_pair->cdr.get()))
+                    {
+                        temp_pair->cdr = cdr;
+                        return car;
+                    }
+                    cu= temp_pair->cdr;
+                }
+                return car;
+            }
+        }
+        Value result = NullV();
+        for (int i = temp_sy->stxs.size() - 1; i >= 0; i--)
+        {
+            Value element = Syntaxtransit(temp_sy->stxs[i],e);
+            result = PairV(element, result);
+        }
+        return result;
     }
     if (dynamic_cast<StringSyntax *>(s.get())) {
         return StringV(dynamic_cast<StringSyntax *>(s.get())->s);
@@ -896,10 +879,9 @@ Value Apply::eval(Assoc &e) {
         }
         throw RuntimeError("Wrong number of arguments");
     }
-
     // Create a new environment frame extending the closure's environment
     Assoc param_env = clos_ptr->env;
-    for (int i = 0; i < (int)clos_ptr->parameters.size(); i++) {
+    for (int i = 0; i < clos_ptr->parameters.size(); i++) {
         // Use extend to add a fresh binding for each parameter with the corresponding argument value
         param_env = extend(clos_ptr->parameters[i], args[i], param_env);
     }
