@@ -184,6 +184,7 @@ Expr List::parse(Assoc &env) {
                 if (parameters.size() == 2)return Expr(new SetCdr(parameters[0], parameters[1]));
                 throw(RuntimeError("Wrong parameter number"));
             } else if (op_type == E_VOID) {
+                if (!parameters.empty())throw(RuntimeError("No parameters for void"));
                 return Expr(new MakeVoid());
             } else if (op_type == E_EXIT) {
                 if (parameters.size() > 0)throw(RuntimeError("Wrong parameter number"));
