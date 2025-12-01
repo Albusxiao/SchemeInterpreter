@@ -173,7 +173,7 @@ Value Var::eval(Assoc &e) {
                 return ProcedureV(it->second.second, it->second.first, e);
             }
         }
-        throw(RuntimeError("Undefined Var"+x));
+        throw(RuntimeError("Undefined Var" + x));
     }
     return matched_value;
 }
@@ -724,9 +724,25 @@ Value IsString::evalRator(const Value &rand) {
 
 Value Begin::eval(Assoc &e) {
     Value temp = VoidV();
+    bool flag = false;
     for (Expr i: es) {
-        temp = i->eval(e);
+        if (dynamic_cast<Define *>(i.get())) {
+            flag = true;
+            break;
+        }
     }
+    if (!flag) {
+        for (Expr i: es) temp = i->eval(e);
+        return temp;
+    }
+    Assoc temp_e = e;
+    for (Expr i: es) {
+        if (dynamic_cast<Define *>(i.get())) {
+            Define *temp_def = dynamic_cast<Define *>(i.get());
+            if (find(temp_def->var, temp_e).get() == nullptr)temp_e = extend(temp_def->var, NullV(), temp_e);
+        }
+    }
+    for (Expr i: es)temp = i->eval(temp_e);
     return temp;
     //TODO: To complete the begin logic
 }
@@ -891,14 +907,15 @@ Value Apply::eval(Assoc &e) {
 Value Define::eval(Assoc &env) {
     if (primitives.count(var) != 0 || reserved_words.count(var) != 0)throw(RuntimeError("Wrong defined name"));
     if (var.empty() || var[0] == '@' || var[0] == '.')throw(RuntimeError("Wrong defined name"));
-    if (dynamic_cast<Lambda *>(e.get())) {
-        env = extend(var, NullV(), env);
-        Value v = e->eval(env);
-        modify(var, v, env);
+    if (find(var,env).get()!=nullptr) {
+        Value v = e->eval(  env);
+        modify(var, v,  env);
         return NonereturnV();
-    } else {
-        Value v = e->eval(env);
-        env = extend(var, v, env);
+    }
+    else {
+        env = extend(var, NullV(), env);
+        Value v = e->eval(  env);
+        modify(var, v,  env);
         return NonereturnV();
     }
 }

@@ -296,18 +296,19 @@ Expr List::parse(Assoc &env) {
                         else throw(RuntimeError("Wrong in Define a Procedure"));
                         vector<string> parameters;
                         parameters.clear();
-                        env = extend(name, VoidV(), env);
+                        Assoc temp_as = env;
+                        temp_as= extend(name, VoidV(), temp_as);
                         for (int i = 1; i < stx1_ls->stxs.size(); i++) {
                             if (dynamic_cast<SymbolSyntax *>(stx1_ls->stxs[i].get())) {
                                 parameters.push_back(dynamic_cast<SymbolSyntax *>(stx1_ls->stxs[i].get())->s);
-                                env = extend(parameters.back(), VoidV(), env);
+                                temp_as = extend(parameters.back(), VoidV(), temp_as);
                             } else throw(RuntimeError("Wrong in Define a Procedure"));
                         }
-                        if (stxs.size() == 3)return Expr(new Define(name, new Lambda(parameters,stxs[2]->parse(env))));
+                        if (stxs.size() == 3)return Expr(new Define(name, new Lambda(parameters,stxs[2]->parse(temp_as))));
                         else {
                             vector<Expr> temp_ls;
                             temp_ls.clear();
-                            for (int i = 2; i < stxs.size(); i++)temp_ls.emplace_back(stxs[i]->parse(env));
+                            for (int i = 2; i < stxs.size(); i++)temp_ls.emplace_back(stxs[i]->parse(temp_as));
                             return Expr(new Define(name, new Lambda(parameters,new Begin(temp_ls))));
                         }
                     }
