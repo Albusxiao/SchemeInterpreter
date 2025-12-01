@@ -80,6 +80,11 @@ Value find(const std::string &, Assoc &);
 /**
  * @brief Void value (represents no meaningful return value)
  */
+struct Nonereturn: ValueBase {
+  Nonereturn();
+  virtual void show(std::ostream &) override;
+};
+Value NonereturnV();
 struct Void : ValueBase {
     Void();
     virtual void show(std::ostream &) override;

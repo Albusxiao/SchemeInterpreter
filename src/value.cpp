@@ -92,7 +92,12 @@ Value find(const std::string &x, Assoc &l) {
 // ============================================================================
 // Simple Value Types Implementation
 // ============================================================================
-
+Nonereturn::Nonereturn() : ValueBase(V_NONERETURN) {}
+void Nonereturn::show(std::ostream &os) {
+}
+Value NonereturnV() {
+    return Value(new Nonereturn());
+}
 // Void
 Void::Void() : ValueBase(V_VOID) {}
 

@@ -68,6 +68,9 @@ Expr List::parse(Assoc &env) {
         vector<Expr> listed;
         listed.clear();
         Expr ex = stxs[0]->parse(env);
+        if (stxs.size()==1) {
+            return Expr(new Apply(ex,listed));
+        }
         if (stxs.size() >= 2) {
             for (int i = 1; i < stxs.size(); i++)listed.push_back(stxs[i]->parse(env));
             return Expr(new Apply(ex, listed));
@@ -183,6 +186,7 @@ Expr List::parse(Assoc &env) {
             } else if (op_type == E_VOID) {
                 return Expr(new MakeVoid());
             } else if (op_type == E_EXIT) {
+                if (parameters.size() > 0)throw(RuntimeError("Wrong parameter number"));
                 return Expr(new Exit());
             } else if (op_type == E_EQQ) {
                 if (parameters.size() == 2)return Expr(new IsEq(parameters[0], parameters[1]));
@@ -208,6 +212,9 @@ Expr List::parse(Assoc &env) {
             } else if (op_type == E_STRINGQ) {
                 if (parameters.size() == 1)return Expr(new IsString(parameters[0]));
                 else throw(RuntimeError("Wrong parameter number"));
+            } else if (op_type == E_DISPLAY) {
+                if (parameters.size()==1)return Expr(new Display(parameters[0]));
+                else throw(RuntimeError("Wrong parameter number"));
             }
         }
         if (reserved_words.count(op) != 0) {
@@ -223,8 +230,9 @@ Expr List::parse(Assoc &env) {
                     return Expr(new Begin(temp));
                 }
                 case E_IF: {
-                    if (stxs.size() == 4)return Expr(new If(stxs[1]->parse(env), stxs[2]->parse(env),
-                                                            stxs[3]->parse(env)));
+                    if (stxs.size() == 4)
+                        return Expr(new If(stxs[1]->parse(env), stxs[2]->parse(env),
+                                           stxs[3]->parse(env)));
                     throw ("Wrong in IF");
                 }
                 case E_COND: {
@@ -267,39 +275,40 @@ Expr List::parse(Assoc &env) {
                                 e = Expr(new Begin(temp));
                             }
                             return Expr(new Lambda(parameters, e));
-                        }
-                        else throw(RuntimeError("Wrong format in Lambada"));
+                        } else throw(RuntimeError("Wrong format in Lambada"));
                     } else throw(RuntimeError("Wrong format in Lambada"));
                 }
                 case E_DEFINE: {
-                    std::cout<<stxs.size()<<std::endl;
-                    if (stxs.size() != 3) throw(RuntimeError("Wrong format in Define"));
+                    if (stxs.size() < 3) throw(RuntimeError("Wrong format in Define"));
                     if (dynamic_cast<SymbolSyntax *>(stxs[1].get())) {
                         string name = dynamic_cast<SymbolSyntax *>(stxs[1].get())->s;
-                        Expr e = stxs[2]->parse(env);
-                        return Expr(new Define(name, e));
+                        env = extend(name, VoidV(), env);
+                        Expr ex=stxs[2]->parse(env);
+                        if (stxs.size() == 3)return Expr(new Define(name, ex));
+                        else throw(RuntimeError("Couldn't bind several procedures to a VAR identifier"));
                     }
                     if (dynamic_cast<List *>(stxs[1].get())) {
-                        List *temp_ls = dynamic_cast<List *>(stxs[1].get());
-                        string name ;
-                        if (dynamic_cast<SymbolSyntax *>(temp_ls->stxs[0].get())) {
-                            name = dynamic_cast<SymbolSyntax *>(temp_ls->stxs[0].get())->s;
-                        }
+                        List *stx1_ls = dynamic_cast<List *>(stxs[1].get());
+                        string name;
+                        if (dynamic_cast<SymbolSyntax *>(stx1_ls->stxs[0].get()))
+                            name = dynamic_cast<SymbolSyntax *>(stx1_ls->stxs[0].get())->s;
                         else throw(RuntimeError("Wrong in Define a Procedure"));
                         vector<string> parameters;
                         parameters.clear();
-                        Assoc temp_env = env;
-                            // Add a placeholder for the function name so recursive calls
-                            // to the function can be parsed inside the body.
-                            temp_env = extend(name, VoidV(), temp_env);
-                        for (int i = 1; i < temp_ls->stxs.size(); i++) {
-                            if (dynamic_cast<SymbolSyntax *>(temp_ls->stxs[i].get())) {
-                                parameters.push_back(dynamic_cast<SymbolSyntax *>(temp_ls->stxs[i].get())->s);
-                                temp_env = extend(parameters.back(), Value(nullptr), temp_env);
+                        env = extend(name, VoidV(), env);
+                        for (int i = 1; i < stx1_ls->stxs.size(); i++) {
+                            if (dynamic_cast<SymbolSyntax *>(stx1_ls->stxs[i].get())) {
+                                parameters.push_back(dynamic_cast<SymbolSyntax *>(stx1_ls->stxs[i].get())->s);
+                                env = extend(parameters.back(), VoidV(), env);
                             } else throw(RuntimeError("Wrong in Define a Procedure"));
                         }
-                        Expr e = stxs[2]->parse(temp_env);
-                        return Expr(new Define(name, Expr(new Lambda(parameters, e))));
+                        if (stxs.size() == 3)return Expr(new Define(name, new Lambda(parameters,stxs[2]->parse(env))));
+                        else {
+                            vector<Expr> temp_ls;
+                            temp_ls.clear();
+                            for (int i = 2; i < stxs.size(); i++)temp_ls.emplace_back(stxs[i]->parse(env));
+                            return Expr(new Define(name, new Lambda(parameters,new Begin(temp_ls))));
+                        }
                     }
                 }
                 case E_LET: {
@@ -311,13 +320,14 @@ Expr List::parse(Assoc &env) {
                         Assoc temp_env = env;
                         for (int i = 0; i < temp_ls->stxs.size(); i++) {
                             List *temp_lst = dynamic_cast<List *>(temp_ls->stxs[i].get());
-                            if (temp_lst!=nullptr && temp_lst->stxs.size() == 2) {
+                            if (temp_lst != nullptr && temp_lst->stxs.size() == 2) {
                                 if (dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())) {
                                     parameters.push_back({
                                         dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s,
                                         temp_lst->stxs[1]->parse(env)
                                     });
-                                    temp_env=extend(dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s,VoidV(),temp_env);
+                                    temp_env = extend(dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s, VoidV(),
+                                                      temp_env);
                                 } else throw(RuntimeError("Wrong in Let"));
                             } else throw(RuntimeError("Wrong in Let's parameters"));
                         }
@@ -343,7 +353,7 @@ Expr List::parse(Assoc &env) {
                         Assoc temp_env = env;
                         for (int i = 0; i < temp_ls->stxs.size(); i++) {
                             List *temp_lst = dynamic_cast<List *>(temp_ls->stxs[i].get());
-                            if (temp_lst!=nullptr && temp_lst->stxs.size() == 2) {
+                            if (temp_lst != nullptr && temp_lst->stxs.size() == 2) {
                                 if (dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())) {
                                     string name = dynamic_cast<SymbolSyntax *>(temp_lst->stxs[0].get())->s;
                                     // add placeholder so that bindings can refer to each other during parsing
@@ -372,7 +382,8 @@ Expr List::parse(Assoc &env) {
                     if (stxs.size() != 3) throw(RuntimeError("Wrong format in Set"));
                     if (dynamic_cast<SymbolSyntax *>(stxs[1].get())) {
                         string name = dynamic_cast<SymbolSyntax *>(stxs[1].get())->s;
-                        return Expr(new Set(name, stxs[2]->parse(env)));
+                        if (find(name, env).get() != nullptr)return Expr(new Set(name, stxs[2]->parse(env)));
+                        else throw(RuntimeError("Undefined var"));
                     } else throw(RuntimeError("Wrong in Set"));
                 }
                 default:
@@ -382,7 +393,7 @@ Expr List::parse(Assoc &env) {
         vector<Expr> parameters;
         parameters.clear();
         for (int i = 1; i < stxs.size(); i++)parameters.push_back(stxs[i]->parse(env));
-        return Expr(new Apply(new Var(dynamic_cast<SymbolSyntax *>(stxs[0].get())->s),parameters));
+        return Expr(new Apply(new Var(dynamic_cast<SymbolSyntax *>(stxs[0].get())->s), parameters));
         //default: use Apply to be an expression
         //TODO: TO COMPLETE THE PARSER LOGIC
         throw(RuntimeError("Unable to parse: " + op));
